@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - 'v*'
+  # The arosl fork starts a release by hand on the tag
+  # (gh workflow run release.yml --ref <tag>): on the fork, a tag push
+  # starts no run. On the tag ref, the signing identity is the same.
+  workflow_dispatch:
 
 permissions:
   contents: write

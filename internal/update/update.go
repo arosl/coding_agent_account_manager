@@ -19,8 +19,9 @@ import (
 )
 
 const (
-	// DefaultOwner is the default GitHub repository owner.
-	DefaultOwner = "Dicklesworthstone"
+	// DefaultOwner is the default GitHub repository owner: the arosl
+	// fork, so an update never replaces the fork's binary with upstream's.
+	DefaultOwner = "arosl"
 	// DefaultRepo is the default GitHub repository name.
 	DefaultRepo = "coding_agent_account_manager"
 	// GitHubAPIBase is the base URL for GitHub API.

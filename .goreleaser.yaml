@@ -67,10 +67,12 @@ changelog:
 
 release:
   github:
-    owner: Dicklesworthstone
+    owner: arosl
     name: coding_agent_account_manager
   draft: false
-  prerelease: auto
+  # Every fork tag has a suffix (v0.1.23-herdr.1); as a prerelease it would
+  # never be GitHub's latest release, which install.sh installs by default.
+  prerelease: false
   extra_files:
     - glob: release-manifest.json
 
@@ -82,6 +84,8 @@ brews:
       name: homebrew-tap
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    # The fork publishes no formula: the tap is upstream's.
+    skip_upload: true
     directory: Formula
     homepage: https://github.com/Dicklesworthstone/coding_agent_account_manager
     description: "CLI tool for managing AI coding agent accounts and configurations"
@@ -105,6 +109,8 @@ scoops:
       name: scoop-bucket
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    # The fork publishes no manifest: the bucket is upstream's.
+    skip_upload: true
     homepage: https://github.com/Dicklesworthstone/coding_agent_account_manager
     description: "CLI tool for managing AI coding agent accounts and configurations"
     license: MIT

@@ -29,8 +29,9 @@ concurrency:
 
 jobs:
   notify-acfs:
-    # Only notify on push to main, not PRs
-    if: github.event_name == 'push'
+    # Only notify on push to main, not PRs. Upstream's repository only: the
+    # arosl fork has no ACFS_DISPATCH_TOKEN, and the ACFS fork pins caam by tag.
+    if: github.event_name == 'push' && github.repository == 'Dicklesworthstone/coding_agent_account_manager'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

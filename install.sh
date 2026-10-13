@@ -23,7 +23,7 @@ set -euo pipefail
 # ==============================================================================
 
 readonly SCRIPT_VERSION="2.0.0"
-readonly REPO_OWNER="Dicklesworthstone"
+readonly REPO_OWNER="arosl"
 readonly REPO_NAME="coding_agent_account_manager"
 readonly BIN_NAME="caam"
 
@@ -90,7 +90,7 @@ show_help() {
 caam installer - Coding Agent Account Manager
 
 Usage:
-  curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/coding_agent_account_manager/main/install.sh" | bash
+  curl -fsSL "https://raw.githubusercontent.com/arosl/coding_agent_account_manager/main/install.sh" | bash
   ./install.sh [OPTIONS]
 
 Options:

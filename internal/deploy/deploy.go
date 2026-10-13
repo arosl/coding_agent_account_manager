@@ -34,8 +34,9 @@ const CoordinatorServiceName = "caam-coordinator"
 const coordinatorConfigRel = ".config/caam/coordinator.json"
 
 // installScriptURL is the official installer, used when the local binary
-// cannot run on the remote platform.
-const installScriptURL = "https://raw.githubusercontent.com/Dicklesworthstone/coding_agent_account_manager/main/install.sh"
+// cannot run on the remote platform. It is the arosl fork's: the fork's
+// installer installs the fork's releases, whose tags upstream lacks.
+const installScriptURL = "https://raw.githubusercontent.com/arosl/coding_agent_account_manager/main/install.sh"
 
 // Deployer handles deployment of caam to remote machines.
 type Deployer struct {
