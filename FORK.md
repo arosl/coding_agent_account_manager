@@ -21,6 +21,8 @@ them small, and merges upstream regularly. It adds no features of its own.
 | `internal/deploy/deploy.go` | `caam setup distributed`: the service PATH check also looks for `herdr`; the installer it runs on a remote of another platform is the fork's |
 | `internal/update/update.go` | `caam update` looks for releases in `arosl`, so it never replaces the fork's binary with upstream's |
 | `install.sh` | `REPO_OWNER="arosl"`: it installs the fork's releases |
+| `install.sh`, `--archive-sha256` | the release archive must have the caller's SHA-256 pin (the section "Releases"); a pinned install never falls back to a source build |
+| `internal/installscript/archive_pin_test.go` | tests for the pins |
 | `.goreleaser.yaml` | releases go to `arosl`, not as prereleases; no Homebrew formula or Scoop manifest is published (the tap and bucket are upstream's) |
 | `.github/workflows/release.yml` | `workflow_dispatch`, so a release can start on a tag by hand |
 | `.github/workflows/notify-acfs.yml` | the job runs only in upstream's repository; the fork has no `ACFS_DISPATCH_TOKEN`, and the ACFS fork pins caam by tag |
@@ -53,7 +55,7 @@ acfs-7mu.3. The change can move to nhm when nhm has such a path.
 ## Releases
 
 The fork tags `v<upstream version>-herdr.<n>` (for example
-`v0.1.23-herdr.1`) on its `main`. Upstream's `release.yml` builds the
+`v0.1.23-herdr.2`) on its `main`. Upstream's `release.yml` builds the
 release with GoReleaser and signs `SHA256SUMS` with cosign, keyless, as
 this repository's workflow on the tag. On the ACFS fork's tool forks, a tag
 push starts no workflow run, so a release is started by hand:
@@ -66,9 +68,23 @@ is never referenced.
 because a fork release has no `SHA256SUMS.minisig`: that signature needs
 upstream's key. So the installer needs `cosign` (upstream's releases need
 `minisign`); without it, it refuses, unless `CI=true` or `NONINTERACTIVE=1`
-lets it fall back to the checksum alone, as upstream's installer does. The
-ACFS fork pins the tagged `install.sh` in its `checksums.yaml` and runs it
-with `--version=<tag>`.
+lets it fall back to the checksum alone, as upstream's installer does.
+
+`--archive-sha256 [<platform>=]<hex>` (repeatable; `linux_amd64=…`,
+`linux_arm64=…`) gives the SHA-256 the release archive must have, a pin kept
+outside the release, as nhm's installer takes it. Pins that are malformed,
+or name no archive for this machine, refuse the install before anything is
+downloaded. The archive must match its pin before anything else in the
+release is trusted; then the installer checks `SHA256SUMS` and the
+signature as before. Only where cosign is missing does the matched pin
+stand in for the signature: Ubuntu 24.04 packages no cosign. A pinned
+install never falls back to a source build. An installed binary of the
+requested version is kept without a check, as upstream's installer keeps
+it; `--force` installs again.
+
+The ACFS fork pins the tagged `install.sh` and each Linux archive in its
+`checksums.yaml`, and runs the installer with `--version=<tag>` and one
+`--archive-sha256` per platform.
 
 `caam update` refuses a fork release: it requires the minisign signature
 for every release from 0.1.18 on, and fails closed without it. Update the

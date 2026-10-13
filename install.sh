@@ -43,6 +43,9 @@ VERIFY_AFTER_INSTALL=false
 FORCE_INSTALL=false
 DRY_RUN=false
 SHOW_HELP=false
+# arosl fork: the --archive-sha256 pins, and the one for this platform.
+ARCHIVE_PINS=()
+ARCHIVE_PIN=""
 
 TMP_DIRS=()
 
@@ -58,6 +61,14 @@ parse_args() {
         case "$1" in
             --version=*)
                 INSTALL_VERSION="${1#*=}"
+                ;;
+            --archive-sha256=*)
+                ARCHIVE_PINS+=("${1#*=}")
+                ;;
+            --archive-sha256)
+                # Without a value, the empty pin is refused as malformed.
+                ARCHIVE_PINS+=("${2:-}")
+                [ $# -lt 2 ] || shift
                 ;;
             --channel=*)
                 INSTALL_CHANNEL="${1#*=}"
@@ -95,6 +106,11 @@ Usage:
 
 Options:
   --version=VERSION   Install specific version (e.g., v1.2.3)
+  --archive-sha256=[PLATFORM=]HEX
+                      The release archive must have this SHA-256 (arosl fork).
+                      Give one per platform (linux_amd64=..., linux_arm64=...);
+                      a plain HEX pins this machine's archive. Pins that name
+                      no archive for this platform refuse the install
   --channel=CHANNEL   Release channel: stable (default) or beta
   --verify            Run self-test after install
   --force             Force reinstall even if same version exists
@@ -458,6 +474,43 @@ detect_platform() {
     esac
 
     echo "${os}_${arch}"
+}
+
+# archive_pin_for prints the SHA-256 that the release archive for platform
+# must have (arosl fork). A caller that keeps pins outside the release (ACFS
+# keeps one per platform beside its install.sh pin) passes them as
+# --archive-sha256, so a re-uploaded archive and SHA256SUMS are refused too.
+# <platform>=<hex> pins that platform's archive; a plain <hex> pins this
+# machine's. Without pins it prints nothing. Malformed pins, or pins that
+# name no archive for platform, fail.
+archive_pin_for() {
+    local platform="$1" p pin="" plain=""
+
+    [ "${#ARCHIVE_PINS[@]}" -gt 0 ] || return 0
+    for p in "${ARCHIVE_PINS[@]}"; do
+        case "$p" in
+            *=*)
+                if ! [[ "${p#*=}" =~ ^[0-9a-f]{64}$ && "${p%%=*}" =~ ^[a-z0-9]+_[a-z0-9]+$ ]]; then
+                    print_error "--archive-sha256 takes <platform>=<64 hex digits>, not '$p'"
+                    return 1
+                fi
+                [ "${p%%=*}" != "$platform" ] || pin="${p#*=}"
+                ;;
+            *)
+                if ! [[ "$p" =~ ^[0-9a-f]{64}$ ]]; then
+                    print_error "--archive-sha256 needs 64 hex digits, not '$p'"
+                    return 1
+                fi
+                plain="$p"
+                ;;
+        esac
+    done
+    [ -n "$pin" ] || pin="$plain"
+    if [ -z "$pin" ]; then
+        print_error "the --archive-sha256 pins name no archive for $platform"
+        return 1
+    fi
+    printf '%s\n' "$pin"
 }
 
 get_release() {
@@ -949,6 +1002,10 @@ CAAM_MINISIGN_PUB
             print_warn "cosign not found — skipping signature verification (CI/non-interactive mode)."
             print_warn "Install cosign for signature verification in production."
             # Fall through to checksum-only verification below
+        elif [ -n "$ARCHIVE_PIN" ]; then
+            # arosl fork: the archive already matched the caller's pin
+            # (try_binary_install), which stands in for the signature.
+            print_info "cosign not found: the archive's --archive-sha256 pin stands in for the signature."
         else
             error "cosign is required to verify release signatures."
             error ""
@@ -1233,6 +1290,23 @@ try_binary_install() {
         fi
     fi
 
+    # arosl fork: a pinned archive must match its pin before anything in the
+    # release is trusted. A mismatch exits the installer, as a failed
+    # verification does, so it never falls through to a source build.
+    if [ -n "$ARCHIVE_PIN" ]; then
+        local pinned_actual=""
+        if command -v sha256sum >/dev/null 2>&1; then
+            pinned_actual=$(sha256sum "$archive_path" | awk '{print $1}')
+        elif command -v shasum >/dev/null 2>&1; then
+            pinned_actual=$(shasum -a 256 "$archive_path" | awk '{print $1}')
+        fi
+        if [ "$pinned_actual" != "$ARCHIVE_PIN" ]; then
+            error "$asset_name has SHA-256 ${pinned_actual:-unknown}, not its --archive-sha256 pin $ARCHIVE_PIN"
+            die "Release archive pin verification failed" $EXIT_VERIFY_FAILED
+        fi
+        info "The archive matches its --archive-sha256 pin."
+    fi
+
     if ! verify_release_assets "$release_json" "$version" "$asset_name" "$archive_path" "$tmp_dir"; then
         error "Release verification failed"
         error "This could indicate a tampered download or network issue"
@@ -1457,6 +1531,10 @@ main() {
     # Detect platform
     local platform
     platform=$(detect_platform) || {
+        # arosl fork: a source build cannot match an archive pin.
+        if [ "${#ARCHIVE_PINS[@]}" -gt 0 ]; then
+            die "Could not detect the platform for the --archive-sha256 pins; nothing was installed" $EXIT_VERIFY_FAILED
+        fi
         warn "Could not detect platform, will try building from source"
         if [ "$DRY_RUN" = true ]; then
             info "[DRY-RUN] Would build from source"
@@ -1468,6 +1546,7 @@ main() {
     }
 
     info "Detected platform: $platform"
+    ARCHIVE_PIN=$(archive_pin_for "$platform") || die "Nothing was installed" $EXIT_VERIFY_FAILED
     info "Install directory: $INSTALL_DIR"
     if [ -n "$INSTALL_VERSION" ]; then
         info "Requested version: $INSTALL_VERSION"
@@ -1510,6 +1589,12 @@ main() {
 
         show_quick_start
         exit $EXIT_SUCCESS
+    fi
+
+    # arosl fork: a pinned install has no source build to fall back to.
+    if [ -n "$ARCHIVE_PIN" ]; then
+        rollback_on_failure
+        die "The pinned release archive could not be installed; a source build cannot match --archive-sha256" $EXIT_DOWNLOAD_FAILED
     fi
 
     # Fall back to building from source
