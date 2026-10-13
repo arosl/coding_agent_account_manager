@@ -37,7 +37,10 @@ func TestArchivePinFor(t *testing.T) {
 		{"no pin for this platform", `--archive-sha256=linux_arm64=` + pinB, false, ""},
 		{"short hex", `--archive-sha256=linux_amd64=abc`, false, ""},
 		{"upper-case hex", `--archive-sha256=linux_amd64=` + strings.ToUpper(pinA), false, ""},
-		{"nhm's platform spelling", `--archive-sha256=linux-amd64=` + pinA, false, ""},
+		// ACFS spells nhm's platforms with a dash and passes caam's alike.
+		{"ACFS's platform spelling", `--archive-sha256 linux-amd64=` + pinA + ` --archive-sha256 linux-arm64=` + pinB, true, pinA},
+		{"ACFS's spelling, other platform only", `--archive-sha256 linux-arm64=` + pinB, false, ""},
+		{"no separator in the platform", `--archive-sha256=linuxamd64=` + pinA, false, ""},
 		{"flag without a value", `--archive-sha256`, false, ""},
 	}
 	for _, tc := range cases {

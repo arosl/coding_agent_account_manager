@@ -108,7 +108,7 @@ Options:
   --version=VERSION   Install specific version (e.g., v1.2.3)
   --archive-sha256=[PLATFORM=]HEX
                       The release archive must have this SHA-256 (arosl fork).
-                      Give one per platform (linux_amd64=..., linux_arm64=...);
+                      Give one per platform (linux_amd64=... or linux-amd64=...);
                       a plain HEX pins this machine's archive. Pins that name
                       no archive for this platform refuse the install
   --channel=CHANNEL   Release channel: stable (default) or beta
@@ -481,7 +481,8 @@ detect_platform() {
 # keeps one per platform beside its install.sh pin) passes them as
 # --archive-sha256, so a re-uploaded archive and SHA256SUMS are refused too.
 # <platform>=<hex> pins that platform's archive; a plain <hex> pins this
-# machine's. Without pins it prints nothing. Malformed pins, or pins that
+# machine's. A platform is spelled linux_amd64 or, as ACFS spells nhm's,
+# linux-amd64. Without pins it prints nothing. Malformed pins, or pins that
 # name no archive for platform, fail.
 archive_pin_for() {
     local platform="$1" p pin="" plain=""
@@ -490,11 +491,11 @@ archive_pin_for() {
     for p in "${ARCHIVE_PINS[@]}"; do
         case "$p" in
             *=*)
-                if ! [[ "${p#*=}" =~ ^[0-9a-f]{64}$ && "${p%%=*}" =~ ^[a-z0-9]+_[a-z0-9]+$ ]]; then
+                if ! [[ "${p#*=}" =~ ^[0-9a-f]{64}$ && "${p%%=*}" =~ ^[a-z0-9]+[-_][a-z0-9]+$ ]]; then
                     print_error "--archive-sha256 takes <platform>=<64 hex digits>, not '$p'"
                     return 1
                 fi
-                [ "${p%%=*}" != "$platform" ] || pin="${p#*=}"
+                [ "${p%%=*}" != "$platform" ] && [ "${p%%=*}" != "${platform/_/-}" ] || pin="${p#*=}"
                 ;;
             *)
                 if ! [[ "$p" =~ ^[0-9a-f]{64}$ ]]; then
