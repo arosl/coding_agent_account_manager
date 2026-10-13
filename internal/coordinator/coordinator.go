@@ -31,7 +31,11 @@ const (
 	// Limitations: no domain awareness, extra process layer, less metadata.
 	BackendTmux Backend = "tmux"
 
-	// BackendAuto tries WezTerm first, falls back to tmux.
+	// BackendHerdr uses herdr's pane commands (arosl fork): the
+	// multiplexer of the ACFS fork, which runs neither WezTerm nor tmux.
+	BackendHerdr Backend = "herdr"
+
+	// BackendAuto tries herdr first, then WezTerm, then tmux.
 	BackendAuto Backend = "auto"
 )
 
@@ -117,7 +121,7 @@ type Config struct {
 // DefaultConfig returns a Config with sensible defaults.
 func DefaultConfig() Config {
 	return Config{
-		Backend:                    BackendAuto, // Try WezTerm first, fall back to tmux
+		Backend:                    BackendAuto, // Try herdr, then WezTerm, then tmux
 		PollInterval:               500 * time.Millisecond,
 		AuthTimeout:                5 * time.Minute,
 		StateTimeout:               30 * time.Second,
@@ -220,10 +224,12 @@ func ParseBackend(value string) (Backend, error) {
 		return BackendWezTerm, nil
 	case "tmux":
 		return BackendTmux, nil
+	case "herdr":
+		return BackendHerdr, nil
 	case "auto", "":
 		return BackendAuto, nil
 	default:
-		return "", fmt.Errorf("invalid backend %q: use wezterm, tmux, or auto", value)
+		return "", fmt.Errorf("invalid backend %q: use herdr, wezterm, tmux, or auto", value)
 	}
 }
 
@@ -388,17 +394,22 @@ func selectPaneClient(backend Backend, logger *slog.Logger) PaneClient {
 	case BackendTmux:
 		return NewTmuxClient()
 
+	case BackendHerdr:
+		return NewHerdrClient()
+
 	case BackendAuto:
 		fallthrough
 	default:
-		// WezTerm is preferred; tmux is the fallback. The choice follows
+		// herdr comes first (arosl fork): a herdr client can run inside a
+		// WezTerm window, and its agents are herdr's panes, not WezTerm's.
+		// Then WezTerm, with tmux as the fallback. The choice follows
 		// whichever is running, so a multiplexer started after the
 		// coordinator is picked up.
-		auto := newAutoPaneClient(ctx, logger, NewWezTermClient(), NewTmuxClient())
+		auto := newAutoPaneClient(ctx, logger, NewHerdrClient(), NewWezTermClient(), NewTmuxClient())
 		if auto.IsAvailable(ctx) {
 			logger.Info("using terminal multiplexer backend", "backend", auto.Backend())
 		} else {
-			logger.Warn("no terminal multiplexer running yet; will use WezTerm or tmux once one starts")
+			logger.Warn("no terminal multiplexer running yet; will use herdr, WezTerm or tmux once one starts")
 		}
 		return auto
 	}

@@ -10,7 +10,8 @@ import (
 )
 
 // PaneClient is the interface for terminal multiplexer backends.
-// Implementations include WezTermClient (preferred) and TmuxClient (fallback).
+// Implementations include WezTermClient (preferred) and TmuxClient (fallback),
+// and HerdrClient in the arosl fork, for herdr's panes.
 //
 // WezTerm is the PREFERRED backend because:
 //   - Integrated multiplexer - panes ARE your terminal panes, no extra layer
@@ -39,7 +40,7 @@ type PaneClient interface {
 	// IsAvailable checks if the backend is available and functional.
 	IsAvailable(ctx context.Context) bool
 
-	// Backend returns the name of this backend ("wezterm" or "tmux").
+	// Backend returns the name of this backend ("wezterm", "tmux" or "herdr").
 	Backend() string
 }
 
@@ -47,6 +48,7 @@ type PaneClient interface {
 var (
 	_ PaneClient = (*WezTermClient)(nil)
 	_ PaneClient = (*TmuxClient)(nil)
+	_ PaneClient = (*HerdrClient)(nil)
 	_ PaneClient = (*autoPaneClient)(nil)
 )
 

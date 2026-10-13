@@ -42,6 +42,10 @@ TERMINAL BACKENDS:
     Requires: tmux server running (tmux new-session -d)
     Limitations: no domain awareness, extra process layer, less metadata.
 
+  herdr (arosl fork) - herdr's panes, for the ACFS fork's herdr server.
+    Auto tries it first. Requires: a herdr server (HERDR_SOCKET_PATH, else
+    the default session).
+
 This daemon should run on the remote machine where Claude Code sessions are running.
 The local auth-agent connects to this coordinator to complete OAuth flows.
 
@@ -60,6 +64,9 @@ Examples:
 
   # Force tmux backend (for Ghostty/Alacritty/iTerm2)
   caam auth-coordinator --backend tmux
+
+  # Force herdr backend
+  caam auth-coordinator --backend herdr
 
   # Custom port and verbose logging
   caam auth-coordinator --port 7891 --verbose
@@ -97,7 +104,7 @@ func init() {
 	coordinatorCmd.Flags().BoolVar(&coordinatorVerbose, "verbose", false, "Verbose output (debug level)")
 	coordinatorCmd.Flags().BoolVar(&coordinatorJSONLogs, "json", false, "Output logs in JSON format")
 	coordinatorCmd.Flags().StringVar(&coordinatorBackend, "backend", "auto",
-		"Terminal multiplexer backend: wezterm (preferred), tmux, or auto")
+		"Terminal multiplexer backend: wezterm (preferred), tmux, herdr, or auto")
 	coordinatorCmd.Flags().StringVar(&coordinatorConfigPath, "config", "", "Path to JSON config file")
 	coordinatorCmd.Flags().StringVar(&coordinatorAuthToken, "auth-token", "", "Auth token for coordinator API (shared secret)")
 }

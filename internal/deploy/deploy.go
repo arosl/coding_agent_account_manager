@@ -549,7 +549,7 @@ func servicePath(loginPath, binaryPath string) string {
 // with path and whether the user's services survive logout.
 func serviceEnvironmentCommand(path string) string {
 	return "sh -c " + shellEscape("PATH="+shellEscape(path)+`; export PATH; `+
-		`for b in wezterm tmux; do command -v "$b" >/dev/null 2>&1 && echo "found=$b"; done; `+
+		`for b in herdr wezterm tmux; do command -v "$b" >/dev/null 2>&1 && echo "found=$b"; done; `+
 		`echo "linger=$(loginctl show-user "$(id -un)" --property=Linger --value 2>/dev/null)"; `+
 		`echo "user=$(id -un)"`)
 }
@@ -573,13 +573,13 @@ func serviceEnvironmentWarnings(output, backend string) []string {
 
 	var warnings []string
 	switch backend {
-	case "wezterm", "tmux":
+	case "wezterm", "tmux", "herdr":
 		if !found[backend] {
 			warnings = append(warnings, fmt.Sprintf("%s is not on the coordinator's PATH; it cannot see any panes until %s is installed there", backend, backend))
 		}
 	default:
-		if !found["wezterm"] && !found["tmux"] {
-			warnings = append(warnings, "neither wezterm nor tmux is on the coordinator's PATH; it cannot see any panes until one is installed")
+		if !found["herdr"] && !found["wezterm"] && !found["tmux"] {
+			warnings = append(warnings, "none of herdr, wezterm or tmux is on the coordinator's PATH; it cannot see any panes until one is installed")
 		}
 	}
 	if linger == "no" {

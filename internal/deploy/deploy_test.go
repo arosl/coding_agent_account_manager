@@ -339,8 +339,10 @@ func TestServiceEnvironmentWarnings(t *testing.T) {
 		want                  []string
 	}{
 		{"all good", "found=wezterm\nlinger=yes\nuser=bob\n", "auto", nil},
-		{"no multiplexer", "linger=yes\nuser=bob\n", "auto", []string{"neither wezterm nor tmux"}},
+		{"no multiplexer", "linger=yes\nuser=bob\n", "auto", []string{"none of herdr, wezterm or tmux"}},
 		{"configured backend missing", "found=tmux\nlinger=yes\n", "wezterm", []string{"wezterm is not on the coordinator's PATH"}},
+		{"herdr only", "found=herdr\nlinger=yes\nuser=bob\n", "auto", nil},
+		{"herdr backend missing", "found=wezterm\nlinger=yes\n", "herdr", []string{"herdr is not on the coordinator's PATH"}},
 		{"no linger", "found=tmux\nlinger=no\nuser=bob\n", "auto", []string{"sudo loginctl enable-linger bob"}},
 		{"no loginctl", "found=tmux\nlinger=\nuser=bob\n", "", nil},
 	}
